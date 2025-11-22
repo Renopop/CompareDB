@@ -627,6 +627,46 @@ def main():
                     # Remplacer under par les mismatches définitifs
                     under = definitive_mismatches
 
+                    # Analyse LLM des matches combinatoires
+                    if llm_client and combinatorial_matches:
+                        progress_bar.progress(93, text="🤖 Analyse LLM des matches combinatoires...")
+                        st.info(f"🤖 Analyse LLM de {len(combinatorial_matches)} matches combinatoires...")
+
+                        for combo_idx, combo_match in enumerate(combinatorial_matches):
+                            logger.info(
+                                f"[llm-combo] Analyse {combo_idx + 1}/{len(combinatorial_matches)} : "
+                                f"src_idx={combo_match['src_index']}"
+                            )
+
+                            # Analyser l'équivalence avec le LLM
+                            antago, expl = llm_client.analyse_equivalence(
+                                combo_match["source"],
+                                combo_match["target"]
+                            )
+
+                            # Ajouter les résultats LLM au match combinatoire
+                            combo_match["équivalence_llm"] = antago
+                            combo_match["commentaire_llm"] = expl
+
+                            logger.debug(
+                                f"[llm-combo] src={combo_match['src_index']}, "
+                                f"équivalence={antago}, commentaire={expl[:50]}..."
+                            )
+
+                        st.success(
+                            f"✅ Analyse LLM terminée pour {len(combinatorial_matches)} matches combinatoires"
+                        )
+
+                        # Compter les matches combinatoires validés/rejetés par le LLM
+                        validated = sum(1 for m in combinatorial_matches if m.get("équivalence_llm") is True)
+                        rejected = sum(1 for m in combinatorial_matches if m.get("équivalence_llm") is False)
+                        uncertain = len(combinatorial_matches) - validated - rejected
+
+                        st.info(
+                            f"📊 Résultats LLM : {validated} validés ✅, "
+                            f"{rejected} rejetés ❌, {uncertain} incertains ⚠️"
+                        )
+
                 # Export des résultats
                 progress_bar.progress(95, text="💾 Sauvegarde des résultats...")
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
