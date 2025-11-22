@@ -447,8 +447,11 @@ def main():
                     emb_client = OfflineEmbeddingsAdapter(embedding_model, logger)
 
                     llm_client = None
-                    if llm_equivalent:
+                    # Créer le LLM client si analyse LLM OU stratégie combinatoire activée
+                    if llm_equivalent or combinatorial_strategy:
                         llm_client = OfflineLLMAdapter(llm_model, logger)
+                        if combinatorial_strategy and not llm_equivalent:
+                            st.info("🤖 LLM activé automatiquement pour l'analyse des matches combinatoires")
                 else:
                     st.info("🌐 Connexion aux API distantes...")
                     _http_client = httpx.Client(verify=VERIFY_SSL, timeout=httpx.Timeout(300.0))
@@ -463,7 +466,8 @@ def main():
                     )
 
                     llm_client = None
-                    if llm_equivalent:
+                    # Créer le LLM client si analyse LLM OU stratégie combinatoire activée
+                    if llm_equivalent or combinatorial_strategy:
                         llm_client = DirectOpenAILLM(
                             model="dallem-val",
                             api_key=DALLEM_API_KEY,
@@ -471,6 +475,8 @@ def main():
                             http_client=_http_client,
                             logger=logger,
                         )
+                        if combinatorial_strategy and not llm_equivalent:
+                            st.info("🤖 LLM activé automatiquement pour l'analyse des matches combinatoires")
 
                 # Lecture des fichiers
                 progress_bar = st.progress(0, text="📖 Lecture des fichiers Excel...")
