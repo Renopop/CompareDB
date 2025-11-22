@@ -212,12 +212,40 @@ def main():
 
     with col1:
         st.subheader("📁 Fichier 1")
-        file1_path = st.text_input(
-            "Chemin du fichier",
-            value="",
-            placeholder="L:\\Test\\Classeur1.xlsx",
-            key="file1"
+
+        # Choix du mode de sélection
+        file1_mode = st.radio(
+            "Mode de sélection",
+            options=["upload", "path"],
+            format_func=lambda x: "📤 Upload/Parcourir" if x == "upload" else "⌨️ Saisir le chemin",
+            key="file1_mode",
+            horizontal=True
         )
+
+        if file1_mode == "upload":
+            uploaded_file1 = st.file_uploader(
+                "Choisir un fichier Excel",
+                type=["xlsx", "xls"],
+                key="file1_uploader",
+                help="Glissez-déposez ou cliquez pour parcourir"
+            )
+
+            if uploaded_file1:
+                # Sauvegarder temporairement le fichier
+                temp_path1 = OUTPUT_DIR / uploaded_file1.name
+                with open(temp_path1, "wb") as f:
+                    f.write(uploaded_file1.getbuffer())
+                file1_path = str(temp_path1)
+                st.success(f"✅ Fichier chargé : {uploaded_file1.name}")
+            else:
+                file1_path = ""
+        else:
+            file1_path = st.text_input(
+                "Chemin du fichier",
+                value="",
+                placeholder="L:\\Test\\Classeur1.xlsx",
+                key="file1_path"
+            )
 
         col1a, col1b = st.columns(2)
         with col1a:
@@ -227,12 +255,40 @@ def main():
 
     with col2:
         st.subheader("📁 Fichier 2")
-        file2_path = st.text_input(
-            "Chemin du fichier",
-            value="",
-            placeholder="L:\\Test\\Classeur2.xlsx",
-            key="file2"
+
+        # Choix du mode de sélection
+        file2_mode = st.radio(
+            "Mode de sélection",
+            options=["upload", "path"],
+            format_func=lambda x: "📤 Upload/Parcourir" if x == "upload" else "⌨️ Saisir le chemin",
+            key="file2_mode",
+            horizontal=True
         )
+
+        if file2_mode == "upload":
+            uploaded_file2 = st.file_uploader(
+                "Choisir un fichier Excel",
+                type=["xlsx", "xls"],
+                key="file2_uploader",
+                help="Glissez-déposez ou cliquez pour parcourir"
+            )
+
+            if uploaded_file2:
+                # Sauvegarder temporairement le fichier
+                temp_path2 = OUTPUT_DIR / uploaded_file2.name
+                with open(temp_path2, "wb") as f:
+                    f.write(uploaded_file2.getbuffer())
+                file2_path = str(temp_path2)
+                st.success(f"✅ Fichier chargé : {uploaded_file2.name}")
+            else:
+                file2_path = ""
+        else:
+            file2_path = st.text_input(
+                "Chemin du fichier",
+                value="",
+                placeholder="L:\\Test\\Classeur2.xlsx",
+                key="file2_path"
+            )
 
         col2a, col2b = st.columns(2)
         with col2a:
