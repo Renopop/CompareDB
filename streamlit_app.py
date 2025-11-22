@@ -489,8 +489,6 @@ def main():
                 progress_bar.progress(100, text="✅ Terminé !")
 
                 # Affichage des résultats
-                st.balloons()
-
                 st.markdown("---")
                 st.markdown("## 🎯 Résultats")
 
