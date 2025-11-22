@@ -98,6 +98,113 @@ DALLEM_API_KEY = os.getenv("DALLEM_API_KEY", "EMPTY")
 VERIFY_SSL = not (os.getenv("DISABLE_SSL_VERIFY", "true").lower() in ("1", "true", "yes", "on"))
 
 
+def apply_combinatorial_strategy(
+    mismatches: list,
+    s1_raw: list,
+    s2_raw: list,
+    Q: np.ndarray,
+    D: np.ndarray,
+    threshold: float,
+    max_combinations: int,
+    logger,
+) -> tuple:
+    """
+    Applique la stratégie combinatoire pour tenter de matcher les mismatches.
+
+    Pour chaque mismatch de la base 1 :
+    1. Compare avec toute la base 2
+    2. Prend les top-k lignes avec les meilleurs scores
+    3. Combine ces lignes (concaténation)
+    4. Compare la ligne base 1 avec la combinaison
+    5. Si match (≥ seuil) : ajoute comme match combinatoire
+    6. Sinon, essaie avec k+1 lignes (jusqu'à max_combinations)
+    7. Si aucune combinaison ne marche : reste en mismatch
+
+    Retourne : (nouveaux_matches, mismatches_definitifs)
+    """
+    logger.info(f"[combinatorial] Démarrage stratégie combinatoire sur {len(mismatches)} mismatches")
+
+    new_matches = []
+    final_mismatches = []
+
+    for mismatch_idx, mismatch_row in enumerate(mismatches):
+        src_idx = mismatch_row["src_index"]
+        src_text = mismatch_row["source"]
+
+        logger.debug(f"[combinatorial] Traitement mismatch {mismatch_idx + 1}/{len(mismatches)} (src_idx={src_idx})")
+
+        # Calculer les scores avec toute la base 2
+        src_embedding = Q[src_idx]  # (d,)
+        scores = np.dot(D, src_embedding)  # (n_d,)
+
+        # Trier par score décroissant
+        sorted_indices = np.argsort(scores)[::-1]
+        sorted_scores = scores[sorted_indices]
+
+        # Tester les combinaisons de 2 à max_combinations
+        match_found = False
+
+        for k in range(2, max_combinations + 1):
+            # Prendre les top-k lignes
+            top_k_indices = sorted_indices[:k]
+            top_k_scores = sorted_scores[:k]
+
+            # Combiner les textes
+            combined_text = " ".join([s2_raw[idx] for idx in top_k_indices])
+
+            # Générer l'embedding de la combinaison
+            # Pour éviter de régénérer l'embedding, on fait une moyenne pondérée
+            # des embeddings existants (approximation rapide)
+            combined_embedding = np.mean(D[top_k_indices], axis=0)
+            combined_embedding = combined_embedding / (np.linalg.norm(combined_embedding) + 1e-12)
+
+            # Calculer le score avec la combinaison
+            combo_score = float(np.dot(src_embedding, combined_embedding))
+
+            logger.debug(
+                f"[combinatorial] src={src_idx}, k={k}, "
+                f"indices={list(top_k_indices)}, combo_score={combo_score:.4f}"
+            )
+
+            # Vérifier si ça fait un match
+            if combo_score >= threshold:
+                logger.info(
+                    f"[combinatorial] ✅ Match trouvé ! src={src_idx}, k={k}, "
+                    f"indices={list(top_k_indices)}, score={combo_score:.4f}"
+                )
+
+                # Créer le nouveau match
+                new_match = {
+                    "src_index": src_idx,
+                    "tgt_index": None,  # Pas d'index unique
+                    "tgt_indices_combined": list(top_k_indices),  # Liste des indices combinés
+                    "source": src_text,
+                    "target": combined_text,
+                    "score": round(combo_score, 4),
+                    "match_type": "combinatorial",
+                    "combination_size": k,
+                    "warning": f"⚠️ MATCH COMBINATOIRE : Lignes base 2 combinées = {list(top_k_indices)}",
+                    "individual_scores": [round(float(s), 4) for s in top_k_scores],
+                }
+
+                new_matches.append(new_match)
+                match_found = True
+                break  # On arrête dès qu'on trouve un match
+
+        if not match_found:
+            # Aucune combinaison n'a matché : mismatch définitif
+            logger.debug(f"[combinatorial] ❌ Aucune combinaison trouvée pour src={src_idx}")
+            mismatch_row["match_type"] = "definitive_mismatch"
+            final_mismatches.append(mismatch_row)
+
+    logger.info(
+        f"[combinatorial] Terminé : {len(new_matches)} nouveaux matches combinatoires, "
+        f"{len(final_mismatches)} mismatches définitifs"
+    )
+
+    return new_matches, final_mismatches
+
+
 def main():
     # En-tête
     st.markdown('<h1 class="main-header">📊 CompareDB</h1>', unsafe_allow_html=True)
@@ -206,6 +313,25 @@ def main():
                 )
             else:
                 llm_max = 200
+
+            st.divider()
+
+            combinatorial_strategy = st.checkbox(
+                "🔀 Stratégie combinatoire pour mismatches",
+                value=False,
+                help="Tente de combiner plusieurs lignes de la base 2 pour matcher les mismatches de la base 1"
+            )
+
+            if combinatorial_strategy:
+                max_combinations = st.slider(
+                    "Nombre max de combinaisons",
+                    min_value=2,
+                    max_value=5,
+                    value=4,
+                    help="Nombre maximum de lignes à combiner (2, 3, 4...)"
+                )
+            else:
+                max_combinations = 4
 
     # Corps principal
     col1, col2 = st.columns(2)
@@ -419,6 +545,7 @@ def main():
                         "source": src,
                         "target": tgt,
                         "score": round(float(score), 4),
+                        "match_type": "normal",  # Pour différencier des matches combinatoires
                     }
 
                     if tgt_idx is not None and score >= threshold:
@@ -474,6 +601,32 @@ def main():
 
                         under = new_under
 
+                # Stratégie combinatoire pour les mismatches
+                if combinatorial_strategy and under:
+                    progress_bar.progress(92, text="🔀 Application de la stratégie combinatoire...")
+                    st.info(f"🔀 Traitement de {len(under)} mismatches avec stratégie combinatoire...")
+
+                    combinatorial_matches, definitive_mismatches = apply_combinatorial_strategy(
+                        mismatches=under,
+                        s1_raw=s1_raw,
+                        s2_raw=s2_raw,
+                        Q=Q,
+                        D=D,
+                        threshold=threshold,
+                        max_combinations=max_combinations,
+                        logger=logger,
+                    )
+
+                    if combinatorial_matches:
+                        st.success(
+                            f"✅ {len(combinatorial_matches)} nouveaux matches trouvés par stratégie combinatoire !"
+                        )
+                        # Ajouter les matches combinatoires aux matches normaux
+                        matches_above.extend(combinatorial_matches)
+
+                    # Remplacer under par les mismatches définitifs
+                    under = definitive_mismatches
+
                 # Export des résultats
                 progress_bar.progress(95, text="💾 Sauvegarde des résultats...")
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -489,58 +642,127 @@ def main():
                 progress_bar.progress(100, text="✅ Terminé !")
 
                 # Affichage des résultats
-                st.balloons()
-
                 st.markdown("---")
                 st.markdown("## 🎯 Résultats")
 
                 # Métriques
-                col_m1, col_m2, col_m3 = st.columns(3)
-
                 total = len(matches_above) + len(under)
                 match_rate = (len(matches_above) / total * 100) if total > 0 else 0
 
+                # Compter les matches combinatoires
+                combinatorial_count = sum(1 for m in matches_above if m.get("match_type") == "combinatorial")
+                normal_matches = len(matches_above) - combinatorial_count
+
+                if combinatorial_count > 0:
+                    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+                else:
+                    col_m1, col_m2, col_m3 = st.columns(3)
+
                 with col_m1:
                     st.metric(
-                        label="✅ Matches",
-                        value=len(matches_above),
-                        help="Paires au-dessus du seuil"
+                        label="✅ Matches normaux",
+                        value=normal_matches,
+                        help="Paires simples au-dessus du seuil"
                     )
 
                 with col_m2:
-                    st.metric(
-                        label="⚠️ Sous le seuil",
-                        value=len(under),
-                        help="Paires sous le seuil"
-                    )
+                    if combinatorial_count > 0:
+                        st.metric(
+                            label="🔀 Matches combinatoires",
+                            value=combinatorial_count,
+                            help="Matches trouvés par combinaison de lignes"
+                        )
+                    else:
+                        st.metric(
+                            label="⚠️ Sous le seuil",
+                            value=len(under),
+                            help="Paires sous le seuil"
+                        )
 
                 with col_m3:
-                    st.metric(
-                        label="📊 Taux de match",
-                        value=f"{match_rate:.1f}%",
-                        help="Pourcentage de correspondances"
-                    )
+                    if combinatorial_count > 0:
+                        st.metric(
+                            label="⚠️ Mismatches définitifs",
+                            value=len(under),
+                            help="Aucune combinaison trouvée"
+                        )
+                    else:
+                        st.metric(
+                            label="📊 Taux de match",
+                            value=f"{match_rate:.1f}%",
+                            help="Pourcentage de correspondances"
+                        )
+
+                if combinatorial_count > 0:
+                    with col_m4:
+                        st.metric(
+                            label="📊 Taux de match",
+                            value=f"{match_rate:.1f}%",
+                            help="Pourcentage de correspondances"
+                        )
 
                 st.markdown("---")
 
                 # Aperçu des résultats
-                tab1, tab2 = st.tabs(["✅ Matches", "⚠️ Sous le seuil"])
+                tab1, tab2 = st.tabs(["✅ Matches", "⚠️ Mismatches définitifs"])
 
                 with tab1:
                     st.subheader(f"Correspondances (≥ {threshold})")
                     if matches_above:
-                        df_matches = pd.DataFrame(matches_above)
-                        st.dataframe(df_matches, use_container_width=True, height=400)
+                        # Séparer matches normaux et combinatoires
+                        normal_matches_list = [m for m in matches_above if m.get("match_type") != "combinatorial"]
+                        combinatorial_matches_list = [m for m in matches_above if m.get("match_type") == "combinatorial"]
+
+                        if combinatorial_count > 0:
+                            st.info(
+                                f"📊 Total : {len(matches_above)} matches "
+                                f"({normal_matches} normaux + {combinatorial_count} combinatoires)"
+                            )
+
+                        # Afficher les matches combinatoires en premier avec un avertissement
+                        if combinatorial_matches_list:
+                            st.warning(
+                                f"⚠️ {len(combinatorial_matches_list)} match(es) combinatoire(s) détecté(s) - "
+                                "Une ligne de base 1 correspond à plusieurs lignes combinées de base 2"
+                            )
+                            st.markdown("**🔀 Matches combinatoires :**")
+                            df_combo = pd.DataFrame(combinatorial_matches_list)
+                            st.dataframe(
+                                df_combo,
+                                use_container_width=True,
+                                height=min(200, len(combinatorial_matches_list) * 50 + 50)
+                            )
+
+                        # Afficher les matches normaux
+                        if normal_matches_list:
+                            if combinatorial_matches_list:
+                                st.markdown("**✅ Matches normaux :**")
+                            df_normal = pd.DataFrame(normal_matches_list)
+                            st.dataframe(
+                                df_normal,
+                                use_container_width=True,
+                                height=min(400, len(normal_matches_list) * 50 + 50)
+                            )
+
+                        # Si aucun match combinatoire, afficher tout ensemble
+                        if not combinatorial_matches_list:
+                            df_matches = pd.DataFrame(matches_above)
+                            st.dataframe(df_matches, use_container_width=True, height=400)
                     else:
                         st.info("Aucune correspondance au-dessus du seuil.")
 
                 with tab2:
-                    st.subheader(f"Sous le seuil (< {threshold})")
+                    if combinatorial_strategy:
+                        st.subheader(f"Mismatches définitifs")
+                        st.info("Ces lignes n'ont pas trouvé de correspondance, même avec la stratégie combinatoire")
+                    else:
+                        st.subheader(f"Sous le seuil (< {threshold})")
+
                     if under:
                         df_under = pd.DataFrame(under)
                         st.dataframe(df_under, use_container_width=True, height=400)
                     else:
-                        st.info("Toutes les paires sont au-dessus du seuil.")
+                        st.success("✅ Toutes les lignes ont trouvé une correspondance !")
 
                 # Téléchargements
                 st.markdown("---")
