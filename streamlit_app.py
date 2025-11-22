@@ -82,7 +82,7 @@ OUTPUT_DIR = Path(__file__).parent / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Logger
-logger = make_logger(debug=True)
+logger = make_logger(debug=False)
 
 # Configuration API
 SNOWFLAKE_API_BASE = os.getenv(
