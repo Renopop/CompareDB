@@ -216,6 +216,18 @@ def main():
     with st.sidebar:
         st.header("⚙️ Configuration")
 
+        # Guide utilisateur
+        with st.expander("📘 Guide utilisateur", expanded=False):
+            try:
+                guide_path = Path(__file__).parent / "USER_GUIDE.md"
+                with open(guide_path, "r", encoding="utf-8") as f:
+                    guide_content = f.read()
+                st.markdown(guide_content, unsafe_allow_html=True)
+            except FileNotFoundError:
+                st.error("Guide utilisateur non trouvé")
+
+        st.divider()
+
         # Mode hors ligne
         st.subheader("Mode d'exécution")
         offline_mode = st.toggle(
