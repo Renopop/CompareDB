@@ -574,6 +574,15 @@ def main():
                             antago, expl = llm_client.analyse_equivalence(row["source"], row["target"])
                             row["équivalence"] = antago
                             row["commentaire"] = expl
+                            row["analyse_llm"] = "Oui (normal)"
+                            row.setdefault("promu_par_llm", False)
+
+                        # Pour les matches non analysés
+                        for k_idx in range(n_above, len(matches_above)):
+                            row = matches_above[k_idx]
+                            row.setdefault("équivalence", None)
+                            row.setdefault("commentaire", "Non analysé (limite budget LLM)")
+                            row.setdefault("analyse_llm", "Non")
                             row.setdefault("promu_par_llm", False)
 
                     # Analyse des mismatches
@@ -585,7 +594,15 @@ def main():
                             antago, expl = llm_client.analyse_equivalence(row["source"], row["target"])
                             row["équivalence"] = antago
                             row["commentaire"] = expl
+                            row["analyse_llm"] = "Oui (mismatch)"
                             row.setdefault("promu_par_llm", False)
+
+                        # Pour les mismatches non analysés
+                        for idx in range(n_under, len(under)):
+                            row = under[idx]
+                            row.setdefault("équivalence", None)
+                            row.setdefault("commentaire", "Non analysé (limite budget LLM)")
+                            row.setdefault("analyse_llm", "Non")
 
                         # Promotion
                         used_targets = {r.get("tgt_index") for r in matches_above if r.get("tgt_index") is not None}
@@ -651,8 +668,10 @@ def main():
                             )
 
                             # Ajouter les résultats LLM au match combinatoire
-                            combo_match["équivalence_llm"] = antago
-                            combo_match["commentaire_llm"] = expl
+                            # Utiliser les mêmes noms de colonnes que pour les matches normaux
+                            combo_match["équivalence"] = antago
+                            combo_match["commentaire"] = expl
+                            combo_match["analyse_llm"] = "Oui (combinatoire)"
 
                             logger.debug(
                                 f"[llm-combo] src={combo_match['src_index']}, "
@@ -664,8 +683,8 @@ def main():
                         )
 
                         # Compter les matches combinatoires validés/rejetés par le LLM
-                        validated = sum(1 for m in combinatorial_matches if m.get("équivalence_llm") is True)
-                        rejected = sum(1 for m in combinatorial_matches if m.get("équivalence_llm") is False)
+                        validated = sum(1 for m in combinatorial_matches if m.get("équivalence") is True)
+                        rejected = sum(1 for m in combinatorial_matches if m.get("équivalence") is False)
                         uncertain = len(combinatorial_matches) - validated - rejected
 
                         st.info(
