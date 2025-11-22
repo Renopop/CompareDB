@@ -430,7 +430,7 @@ def main():
         run_button = st.button(
             "▶️ Lancer la comparaison",
             type="primary",
-            use_container_width=True
+            width='stretch'
         )
 
     # Traitement
@@ -794,7 +794,7 @@ def main():
                             df_combo = pd.DataFrame(combinatorial_matches_list)
                             st.dataframe(
                                 df_combo,
-                                use_container_width=True,
+                                width='stretch',
                                 height=min(200, len(combinatorial_matches_list) * 50 + 50)
                             )
 
@@ -805,14 +805,14 @@ def main():
                             df_normal = pd.DataFrame(normal_matches_list)
                             st.dataframe(
                                 df_normal,
-                                use_container_width=True,
+                                width='stretch',
                                 height=min(400, len(normal_matches_list) * 50 + 50)
                             )
 
                         # Si aucun match combinatoire, afficher tout ensemble
                         if not combinatorial_matches_list:
                             df_matches = pd.DataFrame(matches_above)
-                            st.dataframe(df_matches, use_container_width=True, height=400)
+                            st.dataframe(df_matches, width='stretch', height=400)
                     else:
                         st.info("Aucune correspondance au-dessus du seuil.")
 
@@ -825,7 +825,7 @@ def main():
 
                     if under:
                         df_under = pd.DataFrame(under)
-                        st.dataframe(df_under, use_container_width=True, height=400)
+                        st.dataframe(df_under, width='stretch', height=400)
                     else:
                         st.success("✅ Toutes les lignes ont trouvé une correspondance !")
 
