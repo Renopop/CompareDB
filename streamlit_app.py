@@ -82,7 +82,7 @@ OUTPUT_DIR = Path(__file__).parent / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Logger
-logger = make_logger(debug=True)
+logger = make_logger(debug=False)
 
 # Configuration API
 SNOWFLAKE_API_BASE = os.getenv(
@@ -215,6 +215,18 @@ def main():
     # Sidebar - Configuration
     with st.sidebar:
         st.header("⚙️ Configuration")
+
+        # Guide utilisateur
+        with st.expander("📘 Guide utilisateur", expanded=False):
+            try:
+                guide_path = Path(__file__).parent / "USER_GUIDE.md"
+                with open(guide_path, "r", encoding="utf-8") as f:
+                    guide_content = f.read()
+                st.markdown(guide_content, unsafe_allow_html=True)
+            except FileNotFoundError:
+                st.error("Guide utilisateur non trouvé")
+
+        st.divider()
 
         # Mode hors ligne
         st.subheader("Mode d'exécution")
@@ -430,7 +442,7 @@ def main():
         run_button = st.button(
             "▶️ Lancer la comparaison",
             type="primary",
-            use_container_width=True
+            width='stretch'
         )
 
     # Traitement
@@ -574,6 +586,15 @@ def main():
                             antago, expl = llm_client.analyse_equivalence(row["source"], row["target"])
                             row["équivalence"] = antago
                             row["commentaire"] = expl
+                            row["analyse_llm"] = "Oui (normal)"
+                            row.setdefault("promu_par_llm", False)
+
+                        # Pour les matches non analysés
+                        for k_idx in range(n_above, len(matches_above)):
+                            row = matches_above[k_idx]
+                            row.setdefault("équivalence", None)
+                            row.setdefault("commentaire", "Non analysé (limite budget LLM)")
+                            row.setdefault("analyse_llm", "Non")
                             row.setdefault("promu_par_llm", False)
 
                     # Analyse des mismatches
@@ -585,7 +606,15 @@ def main():
                             antago, expl = llm_client.analyse_equivalence(row["source"], row["target"])
                             row["équivalence"] = antago
                             row["commentaire"] = expl
+                            row["analyse_llm"] = "Oui (mismatch)"
                             row.setdefault("promu_par_llm", False)
+
+                        # Pour les mismatches non analysés
+                        for idx in range(n_under, len(under)):
+                            row = under[idx]
+                            row.setdefault("équivalence", None)
+                            row.setdefault("commentaire", "Non analysé (limite budget LLM)")
+                            row.setdefault("analyse_llm", "Non")
 
                         # Promotion
                         used_targets = {r.get("tgt_index") for r in matches_above if r.get("tgt_index") is not None}
@@ -651,8 +680,10 @@ def main():
                             )
 
                             # Ajouter les résultats LLM au match combinatoire
-                            combo_match["équivalence_llm"] = antago
-                            combo_match["commentaire_llm"] = expl
+                            # Utiliser les mêmes noms de colonnes que pour les matches normaux
+                            combo_match["équivalence"] = antago
+                            combo_match["commentaire"] = expl
+                            combo_match["analyse_llm"] = "Oui (combinatoire)"
 
                             logger.debug(
                                 f"[llm-combo] src={combo_match['src_index']}, "
@@ -664,8 +695,8 @@ def main():
                         )
 
                         # Compter les matches combinatoires validés/rejetés par le LLM
-                        validated = sum(1 for m in combinatorial_matches if m.get("équivalence_llm") is True)
-                        rejected = sum(1 for m in combinatorial_matches if m.get("équivalence_llm") is False)
+                        validated = sum(1 for m in combinatorial_matches if m.get("équivalence") is True)
+                        rejected = sum(1 for m in combinatorial_matches if m.get("équivalence") is False)
                         uncertain = len(combinatorial_matches) - validated - rejected
 
                         st.info(
@@ -775,7 +806,7 @@ def main():
                             df_combo = pd.DataFrame(combinatorial_matches_list)
                             st.dataframe(
                                 df_combo,
-                                use_container_width=True,
+                                width='stretch',
                                 height=min(200, len(combinatorial_matches_list) * 50 + 50)
                             )
 
@@ -786,14 +817,14 @@ def main():
                             df_normal = pd.DataFrame(normal_matches_list)
                             st.dataframe(
                                 df_normal,
-                                use_container_width=True,
+                                width='stretch',
                                 height=min(400, len(normal_matches_list) * 50 + 50)
                             )
 
                         # Si aucun match combinatoire, afficher tout ensemble
                         if not combinatorial_matches_list:
                             df_matches = pd.DataFrame(matches_above)
-                            st.dataframe(df_matches, use_container_width=True, height=400)
+                            st.dataframe(df_matches, width='stretch', height=400)
                     else:
                         st.info("Aucune correspondance au-dessus du seuil.")
 
@@ -806,7 +837,7 @@ def main():
 
                     if under:
                         df_under = pd.DataFrame(under)
-                        st.dataframe(df_under, use_container_width=True, height=400)
+                        st.dataframe(df_under, width='stretch', height=400)
                     else:
                         st.success("✅ Toutes les lignes ont trouvé une correspondance !")
 
