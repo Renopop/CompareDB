@@ -67,8 +67,8 @@ if errorlevel 1 (
 echo.
 echo ========================================
 echo.
-echo Pour lancer l'application, utilisez:
-echo   use.bat
+echo Pour lancer l'application:
+echo   lancer.bat
 echo.
 echo Ou directement:
 echo   streamlit run streamlit_app.py
