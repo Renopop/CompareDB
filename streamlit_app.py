@@ -107,12 +107,13 @@ def apply_combinatorial_strategy(
     threshold: float,
     max_combinations: int,
     logger,
+    excluded_indices: set = None,
 ) -> tuple:
     """
     Applique la stratégie combinatoire pour tenter de matcher les mismatches.
 
     Pour chaque mismatch de la base 1 :
-    1. Compare avec toute la base 2
+    1. Compare avec toute la base 2 (ou seulement les non-matchés si excluded_indices)
     2. Prend les top-k lignes avec les meilleurs scores
     3. Combine ces lignes (concaténation)
     4. Compare la ligne base 1 avec la combinaison
@@ -120,9 +121,18 @@ def apply_combinatorial_strategy(
     6. Sinon, essaie avec k+1 lignes (jusqu'à max_combinations)
     7. Si aucune combinaison ne marche : reste en mismatch
 
+    Args:
+        excluded_indices: Set d'indices de la base 2 à exclure (lignes déjà matchées)
+
     Retourne : (nouveaux_matches, mismatches_definitifs)
     """
-    logger.info(f"[combinatorial] Démarrage stratégie combinatoire sur {len(mismatches)} mismatches")
+    if excluded_indices is None:
+        excluded_indices = set()
+
+    logger.info(
+        f"[combinatorial] Démarrage stratégie combinatoire sur {len(mismatches)} mismatches "
+        f"(exclusion de {len(excluded_indices)} indices déjà matchés)"
+    )
 
     new_matches = []
     final_mismatches = []
@@ -139,6 +149,16 @@ def apply_combinatorial_strategy(
 
         # Trier par score décroissant
         sorted_indices = np.argsort(scores)[::-1]
+
+        # Filtrer les indices exclus (déjà matchés) si option activée
+        if excluded_indices:
+            sorted_indices = np.array([idx for idx in sorted_indices if idx not in excluded_indices])
+            if len(sorted_indices) < 2:
+                logger.debug(f"[combinatorial] ❌ Pas assez d'indices disponibles pour src={src_idx}")
+                mismatch_row["match_type"] = "definitive_mismatch"
+                final_mismatches.append(mismatch_row)
+                continue
+
         sorted_scores = scores[sorted_indices]
 
         # Tester les combinaisons de 2 à max_combinations
@@ -342,8 +362,25 @@ def main():
                     value=4,
                     help="Nombre maximum de lignes à combiner (2, 3, 4...)"
                 )
+
+                combinatorial_threshold = st.slider(
+                    "Seuil de similarité combinatoire",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.65,
+                    step=0.01,
+                    help="Score minimum pour valider un match combinatoire (généralement plus bas que le seuil normal car les embeddings combinés sont moins précis)"
+                )
+
+                exclude_matched_from_combinatorial = st.checkbox(
+                    "Exclure les lignes déjà matchées",
+                    value=False,
+                    help="Si activé, les lignes de la base 2 déjà matchées ne seront pas utilisées dans les combinaisons (évite la réutilisation)"
+                )
             else:
                 max_combinations = 4
+                combinatorial_threshold = 0.65
+                exclude_matched_from_combinatorial = False
 
     # Corps principal
     col1, col2 = st.columns(2)
@@ -639,7 +676,20 @@ def main():
                 # Stratégie combinatoire pour les mismatches
                 if combinatorial_strategy and under:
                     progress_bar.progress(92, text="🔀 Application de la stratégie combinatoire...")
-                    st.info(f"🔀 Traitement de {len(under)} mismatches avec stratégie combinatoire...")
+
+                    # Récupérer les indices déjà matchés si option d'exclusion activée
+                    excluded_indices = None
+                    if exclude_matched_from_combinatorial:
+                        excluded_indices = {
+                            r.get("tgt_index") for r in matches_above
+                            if r.get("tgt_index") is not None
+                        }
+                        st.info(
+                            f"🔀 Traitement de {len(under)} mismatches avec stratégie combinatoire "
+                            f"(seuil={combinatorial_threshold}, {len(excluded_indices)} lignes exclues)..."
+                        )
+                    else:
+                        st.info(f"🔀 Traitement de {len(under)} mismatches avec stratégie combinatoire (seuil={combinatorial_threshold})...")
 
                     combinatorial_matches, definitive_mismatches = apply_combinatorial_strategy(
                         mismatches=under,
@@ -647,9 +697,10 @@ def main():
                         s2_raw=s2_raw,
                         Q=Q,
                         D=D,
-                        threshold=threshold,
+                        threshold=combinatorial_threshold,
                         max_combinations=max_combinations,
                         logger=logger,
+                        excluded_indices=excluded_indices,
                     )
 
                     if combinatorial_matches:
