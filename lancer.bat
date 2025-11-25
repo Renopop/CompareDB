@@ -41,7 +41,11 @@ echo   Pour arreter : Ctrl+C
 echo ========================================
 echo.
 
-streamlit run streamlit_app.py
+REM Ouvrir le navigateur apres 2 secondes
+start "" cmd /c "timeout /t 2 /nobreak >nul && start http://localhost:8501"
+
+REM Lancer Streamlit
+streamlit run streamlit_app.py --server.headless true
 
 if errorlevel 1 (
     echo.
