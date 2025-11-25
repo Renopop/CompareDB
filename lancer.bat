@@ -34,18 +34,15 @@ REM Creer le repertoire output si necessaire
 if not exist "output" mkdir output
 
 echo Demarrage de l interface...
+echo Le navigateur va s ouvrir automatiquement.
 echo.
 echo ========================================
-echo   URL : http://localhost:8501
 echo   Pour arreter : Ctrl+C
 echo ========================================
 echo.
 
-REM Ouvrir le navigateur apres 2 secondes
-start "" cmd /c "timeout /t 2 /nobreak >nul && start http://localhost:8501"
-
-REM Lancer Streamlit
-streamlit run streamlit_app.py --server.headless true
+REM Lancer Streamlit avec ouverture automatique du navigateur
+streamlit run streamlit_app.py --server.headless false --browser.gatherUsageStats false
 
 if errorlevel 1 (
     echo.
