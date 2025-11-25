@@ -230,13 +230,10 @@ def main():
     st.markdown('<h1 class="main-header">📊 CompareDB</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Comparaison sémantique intelligente avec IA</p>', unsafe_allow_html=True)
 
-    st.divider()
+    # Documentation sous le titre
+    doc_col1, doc_col2 = st.columns(2)
 
-    # Sidebar - Configuration
-    with st.sidebar:
-        st.header("⚙️ Configuration")
-
-        # Guide utilisateur
+    with doc_col1:
         with st.expander("📘 Guide utilisateur", expanded=False):
             try:
                 guide_path = Path(__file__).parent / "USER_GUIDE.md"
@@ -246,7 +243,21 @@ def main():
             except FileNotFoundError:
                 st.error("Guide utilisateur non trouvé")
 
-        st.divider()
+    with doc_col2:
+        with st.expander("📖 README", expanded=False):
+            try:
+                readme_path = Path(__file__).parent / "README.md"
+                with open(readme_path, "r", encoding="utf-8") as f:
+                    readme_content = f.read()
+                st.markdown(readme_content, unsafe_allow_html=True)
+            except FileNotFoundError:
+                st.error("README non trouvé")
+
+    st.divider()
+
+    # Sidebar - Configuration
+    with st.sidebar:
+        st.header("⚙️ Configuration")
 
         # Mode hors ligne
         st.subheader("Mode d'exécution")
