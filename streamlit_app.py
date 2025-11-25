@@ -342,8 +342,18 @@ def main():
                     value=4,
                     help="Nombre maximum de lignes à combiner (2, 3, 4...)"
                 )
+
+                combinatorial_threshold = st.slider(
+                    "Seuil de similarité combinatoire",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=0.65,
+                    step=0.01,
+                    help="Score minimum pour valider un match combinatoire (généralement plus bas que le seuil normal car les embeddings combinés sont moins précis)"
+                )
             else:
                 max_combinations = 4
+                combinatorial_threshold = 0.65
 
     # Corps principal
     col1, col2 = st.columns(2)
@@ -639,7 +649,7 @@ def main():
                 # Stratégie combinatoire pour les mismatches
                 if combinatorial_strategy and under:
                     progress_bar.progress(92, text="🔀 Application de la stratégie combinatoire...")
-                    st.info(f"🔀 Traitement de {len(under)} mismatches avec stratégie combinatoire...")
+                    st.info(f"🔀 Traitement de {len(under)} mismatches avec stratégie combinatoire (seuil={combinatorial_threshold})...")
 
                     combinatorial_matches, definitive_mismatches = apply_combinatorial_strategy(
                         mismatches=under,
@@ -647,7 +657,7 @@ def main():
                         s2_raw=s2_raw,
                         Q=Q,
                         D=D,
-                        threshold=threshold,
+                        threshold=combinatorial_threshold,
                         max_combinations=max_combinations,
                         logger=logger,
                     )
