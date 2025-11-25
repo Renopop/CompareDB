@@ -230,28 +230,15 @@ def main():
     st.markdown('<h1 class="main-header">📊 CompareDB</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtitle">Comparaison sémantique intelligente avec IA</p>', unsafe_allow_html=True)
 
-    # Documentation sous le titre
-    doc_col1, doc_col2 = st.columns(2)
-
-    with doc_col1:
-        with st.expander("📘 Guide utilisateur", expanded=False):
-            try:
-                guide_path = Path(__file__).parent / "USER_GUIDE.md"
-                with open(guide_path, "r", encoding="utf-8") as f:
-                    guide_content = f.read()
-                st.markdown(guide_content, unsafe_allow_html=True)
-            except FileNotFoundError:
-                st.error("Guide utilisateur non trouvé")
-
-    with doc_col2:
-        with st.expander("📖 README", expanded=False):
-            try:
-                readme_path = Path(__file__).parent / "README.md"
-                with open(readme_path, "r", encoding="utf-8") as f:
-                    readme_content = f.read()
-                st.markdown(readme_content, unsafe_allow_html=True)
-            except FileNotFoundError:
-                st.error("README non trouvé")
+    # Guide utilisateur sous le titre
+    with st.expander("📘 Guide utilisateur", expanded=False):
+        try:
+            guide_path = Path(__file__).parent / "USER_GUIDE.md"
+            with open(guide_path, "r", encoding="utf-8") as f:
+                guide_content = f.read()
+            st.markdown(guide_content, unsafe_allow_html=True)
+        except FileNotFoundError:
+            st.error("Guide utilisateur non trouvé")
 
     st.divider()
 
@@ -936,6 +923,17 @@ def main():
                 st.code(traceback.format_exc())
             logger.error(f"Erreur : {e}")
             logger.debug(traceback.format_exc())
+
+    # README en bas de page
+    st.markdown("---")
+    with st.expander("📖 README - Documentation technique", expanded=False):
+        try:
+            readme_path = Path(__file__).parent / "README.md"
+            with open(readme_path, "r", encoding="utf-8") as f:
+                readme_content = f.read()
+            st.markdown(readme_content, unsafe_allow_html=True)
+        except FileNotFoundError:
+            st.error("README non trouvé")
 
     # Footer
     st.markdown("---")
