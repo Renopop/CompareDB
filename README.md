@@ -1,348 +1,227 @@
-# 📊 CompareDB - Comparaison Sémantique Intelligente
+# CompareDB - Comparaison Sémantique Intelligente
 
-Interface Streamlit moderne pour la comparaison sémantique de documents Excel avec support des modèles en ligne et hors ligne.
-
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.28+-red.svg)](https://streamlit.io)
-[![License](https://img.shields.io/badge/License-Proprietary-yellow.svg)](LICENSE)
+Outil de comparaison sémantique de documents Excel avec intelligence artificielle.
 
 ---
 
-## 🎯 Fonctionnalités
+## Installation et Lancement (Windows)
 
-### Interface Streamlit moderne
-- ✅ Interface utilisateur intuitive et responsive
-- ✅ Upload/parcourir fichiers ou saisie manuelle
-- ✅ Thème personnalisable (clair/sombre)
-- ✅ Barre de progression en temps réel
-- ✅ Export Excel direct
-
-### Intelligence artificielle
-- 🤖 **Analyse sémantique** avec embeddings
-- 🔍 **Détection d'équivalences** via LLM
-- 🔀 **Stratégie combinatoire** pour exigences fragmentées
-- 📈 **Validation automatique** des matches
-
-### Modes d'exécution
-- 🌐 **Mode en ligne** : API Snowflake + DALLEM
-- 🔌 **Mode hors ligne** : Modèles locaux (Qwen, Mistral, BGE-M3)
-- 🔄 **Basculement simple** via toggle
-
----
-
-## 🚀 Installation rapide
-
-### Windows (2 clics)
-
-```cmd
-# 1. Installer
-install.bat
-
-# 2. Lancer
-use.bat
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                             │
+│   1. Double-cliquer sur  install.bat                        │
+│      → Installe Python et les dépendances                   │
+│                                                             │
+│   2. Double-cliquer sur  lancer.bat                         │
+│      → Ouvre l'interface sur http://localhost:8501          │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Linux/Mac
 
 ```bash
-# Installer
 pip install -r requirements.txt
-
-# Lancer
 streamlit run streamlit_app.py
 ```
 
-**Interface** : http://localhost:8501
-
 ---
 
-## 📚 Documentation
+## Schéma de la Méthode de Comparaison
 
-| Document | Description |
-|----------|-------------|
-| [**INSTALL_WINDOWS.md**](INSTALL_WINDOWS.md) | 🪟 Guide installation Windows complet |
-| [**QUICKSTART_STREAMLIT.md**](QUICKSTART_STREAMLIT.md) | ⚡ Démarrage rapide (3 minutes) |
-| [**README_STREAMLIT.md**](README_STREAMLIT.md) | 📖 Documentation Streamlit complète |
-| [**USER_GUIDE.md**](USER_GUIDE.md) | 📘 Guide utilisateur avec schémas |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PROCESSUS DE COMPARAISON                            │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-**Guide intégré** : Disponible dans l'interface (📘 dans la sidebar)
-
----
-
-## 🎯 Utilisation
-
-### 1. Configuration
-
-**Sidebar > Configuration**
-- Mode d'exécution : En ligne / Hors ligne
-- Paramètres avancés : Seuil, batch size, mode matching
-- Analyse LLM : Budget configurable
-- Stratégie combinatoire : Max combinations
-
-### 2. Fichiers
-
-**Corps principal**
-- Fichier 1 / Fichier 2
-- Upload direct ou chemin manuel
-- Sélection feuille + colonne
-
-### 3. Résultats
-
-**Après traitement**
-- Métriques : Matches normaux, combinatoires, mismatches
-- Tableaux interactifs avec tabs
-- Export Excel automatique
-
----
-
-## 🔧 Configuration
-
-### Variables d'environnement (optionnel)
-
-Créer un fichier `.env` :
-
-```bash
-# APIs en ligne
-SNOWFLAKE_API_KEY=your_key
-DALLEM_API_KEY=your_key
-
-# Désactiver la vérification SSL (si nécessaire)
-DISABLE_SSL_VERIFY=true
+     ┌──────────────┐                              ┌──────────────┐
+     │   BASE 1     │                              │   BASE 2     │
+     │   (Source)   │                              │   (Cible)    │
+     │              │                              │              │
+     │  Fichier.xlsx│                              │  Fichier.xlsx│
+     └──────┬───────┘                              └──────┬───────┘
+            │                                             │
+            ▼                                             ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 1 : GÉNÉRATION DES EMBEDDINGS (Vectorisation IA)                     │
+│                                                                             │
+│  Chaque texte → Vecteur numérique (embedding) capturant le sens            │
+│                                                                             │
+│  Exemple : "Le moteur démarre" → [0.23, -0.45, 0.78, ...]                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 2 : CALCUL DE SIMILARITÉ                                             │
+│                                                                             │
+│  Pour chaque ligne Base 1, calcul de la similarité cosinus avec Base 2     │
+│                                                                             │
+│  Score ∈ [0, 1]  →  1 = identique, 0 = totalement différent                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    │                                   │
+                    ▼                                   ▼
+          ┌─────────────────┐                 ┌─────────────────┐
+          │  Score ≥ Seuil  │                 │  Score < Seuil  │
+          │                 │                 │                 │
+          │    MATCH ✓      │                 │   MISMATCH ✗    │
+          └────────┬────────┘                 └────────┬────────┘
+                   │                                   │
+                   │                                   ▼
+                   │               ┌──────────────────────────────────────┐
+                   │               │  ÉTAPE 3 : STRATÉGIE COMBINATOIRE    │
+                   │               │  (optionnelle)                       │
+                   │               │                                      │
+                   │               │  Tente de combiner plusieurs lignes  │
+                   │               │  de Base 2 pour trouver un match     │
+                   │               │                                      │
+                   │               │  Exemple :                           │
+                   │               │  Base 1: "Support 1000 users < 2s"   │
+                   │               │  Base 2: [15] "Support 1000 users"   │
+                   │               │          [31] "Temps < 2 secondes"   │
+                   │               │  → Combinaison [15+31] = Match ✓     │
+                   │               └──────────────┬───────────────────────┘
+                   │                              │
+                   │          ┌──────────────────┼──────────────────┐
+                   │          │                  │                  │
+                   │          ▼                  │                  ▼
+                   │  ┌───────────────┐          │         ┌───────────────┐
+                   │  │    MATCH      │          │         │   MISMATCH    │
+                   │  │ COMBINATOIRE  │          │         │   DÉFINITIF   │
+                   │  └───────┬───────┘          │         └───────────────┘
+                   │          │                  │
+                   └──────────┴──────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 4 : VALIDATION LLM (optionnelle)                                     │
+│                                                                             │
+│  L'IA examine chaque match et détermine :                                  │
+│  • TRUE  → Textes sémantiquement équivalents                               │
+│  • FALSE → Textes non équivalents                                          │
+│  • Commentaire explicatif                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ÉTAPE 5 : EXPORT EXCEL                                                     │
+│                                                                             │
+│  • matches_YYYYMMDD_HHMMSS.xlsx  → Tous les matches trouvés                │
+│  • under_YYYYMMDD_HHMMSS.xlsx    → Mismatches (aucune correspondance)      │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Modèles hors ligne
+---
 
-Modifier `offline_models.py` pour les chemins locaux :
+## Interface Utilisateur
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CompareDB                                                                  │
+├──────────────────────────┬──────────────────────────────────────────────────┤
+│                          │                                                  │
+│  SIDEBAR (Configuration) │  ZONE PRINCIPALE                                 │
+│  ─────────────────────── │  ──────────────────                              │
+│                          │                                                  │
+│  ☐ Mode hors ligne       │  ┌─────────────────┐  ┌─────────────────┐       │
+│                          │  │   Fichier 1     │  │   Fichier 2     │       │
+│  Modèle LLM:             │  │   [Parcourir]   │  │   [Parcourir]   │       │
+│  [Qwen 2.5 3B ▼]         │  │   Feuille: ___  │  │   Feuille: ___  │       │
+│                          │  │   Colonne: ___  │  │   Colonne: ___  │       │
+│  ▶ Paramètres avancés    │  └─────────────────┘  └─────────────────┘       │
+│    • Seuil: 0.78         │                                                  │
+│    • Batch: 16           │         [▶ Lancer la comparaison]                │
+│    • Limite lignes: 0    │                                                  │
+│    ☐ Analyse LLM         │  ┌──────────────────────────────────────────┐   │
+│    ☐ Combinatoire        │  │  RÉSULTATS                                │   │
+│                          │  │  ✓ Matches: 150  ✗ Mismatches: 45        │   │
+│  📘 Guide utilisateur    │  │                                           │   │
+│                          │  │  [📥 Télécharger matches]                 │   │
+│                          │  │  [📥 Télécharger mismatches]              │   │
+│                          │  └──────────────────────────────────────────┘   │
+└──────────────────────────┴──────────────────────────────────────────────────┘
+```
+
+---
+
+## Modes d'Exécution
+
+| Mode | Description | Prérequis |
+|------|-------------|-----------|
+| **En ligne** | APIs Snowflake + DALLEM | Connexion réseau |
+| **Hors ligne** | Modèles locaux (Qwen, Mistral, BGE-M3) | GPU recommandé, 16GB RAM |
+
+---
+
+## Paramètres Clés
+
+| Paramètre | Description | Valeur par défaut |
+|-----------|-------------|-------------------|
+| **Seuil de similarité** | Score minimum pour un match (0-1) | 0.78 |
+| **Analyse LLM** | Validation sémantique par IA | Désactivé |
+| **Stratégie combinatoire** | Combine plusieurs lignes pour matcher | Désactivé |
+| **Max combinaisons** | Nombre max de lignes à combiner | 4 |
+
+---
+
+## Fichiers de Résultat
+
+### matches_*.xlsx
+
+| Colonne | Description |
+|---------|-------------|
+| `source` | Texte de la Base 1 |
+| `target` | Texte correspondant de la Base 2 |
+| `score` | Score de similarité (0-1) |
+| `match_type` | "normal" ou "combinatorial" |
+| `équivalence` | Validation LLM (TRUE/FALSE) |
+| `commentaire` | Explication du LLM |
+
+### under_*.xlsx
+
+Lignes de la Base 1 sans correspondance dans la Base 2.
+
+---
+
+## Structure du Projet
+
+```
+CompareDB/
+├── install.bat           ← Installation (double-clic)
+├── lancer.bat            ← Lancement (double-clic)
+├── streamlit_app.py      ← Application principale
+├── offline_models.py     ← Configuration modèles locaux
+├── requirements.txt      ← Dépendances Python
+├── README.md             ← Ce fichier
+├── USER_GUIDE.md         ← Guide utilisateur détaillé
+└── output/               ← Résultats Excel générés
+```
+
+---
+
+## Dépannage
+
+| Problème | Solution |
+|----------|----------|
+| Python non reconnu | Installer Python 3.10+ et cocher "Add to PATH" |
+| Port 8501 occupé | `streamlit run streamlit_app.py --server.port 8502` |
+| Mode hors ligne indisponible | `pip install torch transformers sentence-transformers` |
+
+---
+
+## Configuration Mode Hors Ligne
+
+Modifier les chemins dans `offline_models.py` :
 
 ```python
 AVAILABLE_LLM_MODELS = {
     "qwen": "C:\\Models\\Qwen\\Qwen2.5-3B-Instruct",
     "mistral": "C:\\Models\\mistralai\\Mistral-7B-Instruct-v0.3",
 }
-
 DEFAULT_EMBEDDING = "C:\\Models\\BAAI\\bge-m3"
 ```
 
-**Télécharger les modèles** :
-- [Qwen 2.5 3B](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct)
-- [Mistral 7B](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3)
-- [BGE-M3](https://huggingface.co/BAAI/bge-m3)
-
 ---
 
-## 🔀 Stratégie combinatoire
-
-**Innovation principale** : Détection automatique des exigences fragmentées
-
-### Principe
-
-Pour chaque mismatch :
-1. Compare avec **toute la Base 2**
-2. Sélectionne **top-k lignes** avec meilleurs scores
-3. **Combine les textes** par concaténation
-4. **Recalcule la similarité**
-5. Si ≥ seuil → **Match combinatoire** ✅
-6. Sinon → Essaie **k+1 lignes** (jusqu'à max)
-7. **Validation LLM automatique**
-
-### Exemple
-
-```
-Base 1 : "Le système doit supporter 1000 utilisateurs avec temps < 2s"
-
-Base 2 fragmentée :
-  [15] "Support de 1000 users"
-  [31] "Performance < 2 secondes"
-  [23] "Temps de réponse rapide"
-
-→ Combinaison [15, 31, 23] : Score 0.81 ✅
-→ Match combinatoire avec warning
-→ LLM valide l'équivalence
-```
-
----
-
-## 📥 Résultats
-
-### Fichiers Excel générés
-
-#### `matches_YYYYMMDD_HHMMSS.xlsx`
-Tous les matches (normaux + combinatoires)
-
-**Colonnes principales** :
-- `src_index`, `tgt_index` : Indices des lignes
-- `source`, `target` : Textes comparés
-- `score` : Similarité (0-1)
-- `match_type` : "normal" / "combinatorial"
-- `équivalence` : Validation LLM (TRUE/FALSE/None)
-- `commentaire` : Explication LLM
-- `analyse_llm` : Type d'analyse
-- `tgt_indices_combined` : Indices combinés (si combinatoire)
-- `warning` : Avertissement (si combinatoire)
-
-#### `under_YYYYMMDD_HHMMSS.xlsx`
-Mismatches définitifs (aucune correspondance)
-
----
-
-## 🛠️ Développement
-
-### Structure du projet
-
-```
-CompareDB/
-├── streamlit_app.py          # Application principale
-├── offline_models.py         # Support modèles locaux
-├── requirements.txt          # Dépendances
-│
-├── install.bat               # Installation Windows
-├── use.bat                   # Lancement Windows
-├── run_streamlit.sh          # Lancement Linux/Mac
-│
-├── USER_GUIDE.md            # Guide utilisateur complet
-├── INSTALL_WINDOWS.md       # Guide installation Windows
-├── README_STREAMLIT.md      # Documentation Streamlit
-├── QUICKSTART_STREAMLIT.md  # Démarrage rapide
-│
-├── .streamlit/
-│   └── config.toml          # Configuration Streamlit
-│
-└── output/                  # Résultats Excel
-```
-
-### Technologies
-
-- **Interface** : Streamlit 1.28+
-- **IA** : OpenAI API / Transformers
-- **Embeddings** : Snowflake Arctic / BGE-M3
-- **LLM** : DALLEM / Qwen / Mistral
-- **Data** : Pandas, NumPy, OpenPyXL
-
----
-
-## ⚙️ Configuration système
-
-### Minimum (mode en ligne)
-- Python 3.10+
-- RAM : 4 GB
-- Disque : 500 MB
-
-### Recommandé (mode hors ligne)
-- Python 3.10+
-- RAM : 16 GB
-- Disque : 20 GB (modèles)
-- GPU : NVIDIA avec CUDA (optionnel)
-
----
-
-## 🐛 Dépannage
-
-### Port 8501 occupé
-
-```bash
-# Linux/Mac
-lsof -ti:8501 | xargs kill -9
-
-# Windows
-netstat -ano | findstr :8501
-taskkill /PID <PID> /F
-```
-
-### Problème avec Streamlit
-
-```bash
-# Réinstaller
-pip install --upgrade streamlit
-
-# Tester
-streamlit hello
-```
-
-### Mode hors ligne non disponible
-
-```bash
-# Installer les dépendances
-pip install torch transformers sentence-transformers accelerate
-
-# Vérifier
-python -c "import torch; print(torch.__version__)"
-```
-
----
-
-## 📊 Exemples d'utilisation
-
-### Cas 1 : Comparaison simple
-
-**Configuration** :
-- Mode : En ligne
-- Analyse LLM : Désactivé
-- Stratégie combinatoire : Désactivé
-
-**Usage** : Comparaison rapide de deux versions de specs
-
-### Cas 2 : Validation sémantique
-
-**Configuration** :
-- Mode : En ligne
-- Analyse LLM : Activé (budget 300)
-- Stratégie combinatoire : Désactivé
-
-**Usage** : Détection d'équivalences subtiles avec validation IA
-
-### Cas 3 : Exigences fragmentées
-
-**Configuration** :
-- Mode : En ligne
-- Analyse LLM : Auto-activé
-- Stratégie combinatoire : Activé (max 4)
-
-**Usage** : Matching d'exigences éclatées en plusieurs lignes
-
-### Cas 4 : Hors ligne complet
-
-**Configuration** :
-- Mode : Hors ligne
-- Modèle : Qwen 2.5 3B + BGE-M3
-- Analyse LLM : Activé
-- Stratégie combinatoire : Activé
-
-**Usage** : Traitement autonome sans réseau (données sensibles)
-
----
-
-## 📄 Licence
-
-**Propriétaire - Dassault Aviation**
-
-Usage interne uniquement. Tous droits réservés.
-
----
-
-## 🆘 Support
-
-- **Documentation** : Voir [USER_GUIDE.md](USER_GUIDE.md)
-- **Guide rapide** : Voir [QUICKSTART_STREAMLIT.md](QUICKSTART_STREAMLIT.md)
-- **Installation Windows** : Voir [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md)
-
----
-
-## 🎉 Démarrer maintenant
-
-### Windows
-```cmd
-install.bat
-use.bat
-```
-
-### Linux/Mac
-```bash
-pip install -r requirements.txt
-streamlit run streamlit_app.py
-```
-
-**Accès** : http://localhost:8501
-
----
-
-**Développé avec ❤️ pour Dassault Aviation**
+**Licence** : Propriétaire - Dassault Aviation
