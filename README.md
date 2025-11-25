@@ -135,7 +135,8 @@ streamlit run streamlit_app.py
 │    • Limite lignes: 0    │                                                  │
 │    ☐ Analyse LLM         │  ┌──────────────────────────────────────────┐   │
 │    ☐ Combinatoire        │  │  RÉSULTATS                                │   │
-│                          │  │  ✓ Matches: 150  ✗ Mismatches: 45        │   │
+│      • Seuil combo: 0.65 │  │  ✓ Matches: 150  ✗ Mismatches: 45        │   │
+│      ☐ Exclure matchés   │  │                                           │   │
 │  📘 Guide utilisateur    │  │                                           │   │
 │                          │  │  [📥 Télécharger matches]                 │   │
 │                          │  │  [📥 Télécharger mismatches]              │   │
@@ -158,10 +159,12 @@ streamlit run streamlit_app.py
 
 | Paramètre | Description | Valeur par défaut |
 |-----------|-------------|-------------------|
-| **Seuil de similarité** | Score minimum pour un match (0-1) | 0.78 |
+| **Seuil de similarité** | Score minimum pour un match normal (0-1) | 0.78 |
 | **Analyse LLM** | Validation sémantique par IA | Désactivé |
 | **Stratégie combinatoire** | Combine plusieurs lignes pour matcher | Désactivé |
 | **Max combinaisons** | Nombre max de lignes à combiner | 4 |
+| **Seuil combinatoire** | Score minimum pour un match combinatoire | 0.65 |
+| **Exclure lignes matchées** | Ne pas réutiliser les lignes déjà matchées | Désactivé |
 
 ---
 

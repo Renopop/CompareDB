@@ -107,7 +107,28 @@ Mismatch de Base 1 : "Le système doit supporter 1000 utilisateurs avec temps < 
 
 Cocher **"Stratégie combinatoire pour mismatches"** dans les paramètres avancés.
 
-**Paramètre** : Nombre max de combinaisons (2-5, défaut: 4)
+### Paramètres combinatoires
+
+| Paramètre | Description | Défaut |
+|-----------|-------------|--------|
+| **Nombre max de combinaisons** | Nombre maximum de lignes à combiner (2-5) | 4 |
+| **Seuil de similarité combinatoire** | Score minimum pour valider un match combinatoire | 0.65 |
+| **Exclure les lignes déjà matchées** | Ne pas réutiliser les lignes de Base 2 déjà matchées | Désactivé |
+
+#### Seuil combinatoire
+
+Le seuil combinatoire est généralement **plus bas** que le seuil principal (0.65 vs 0.78) car les embeddings combinés (moyennes de plusieurs vecteurs) sont intrinsèquement moins précis que les embeddings individuels.
+
+#### Option d'exclusion
+
+Quand **"Exclure les lignes déjà matchées"** est activé :
+- Les lignes de Base 2 ayant déjà trouvé un match ne sont **pas réutilisées** dans les combinaisons
+- Évite la réutilisation d'une même ligne dans plusieurs matches
+- Utile quand chaque ligne de Base 2 ne doit correspondre qu'à une seule ligne
+
+Quand désactivé (par défaut) :
+- Toutes les lignes de Base 2 peuvent être combinées, même celles déjà matchées
+- Permet de trouver plus de correspondances
 
 ---
 
@@ -148,10 +169,12 @@ Les matches sont analysés par ordre de score décroissant.
 
 | Paramètre | Description | Défaut | Recommandation |
 |-----------|-------------|--------|----------------|
-| **Seuil de similarité** | Score minimum pour match | 0.78 | 0.75-0.82 selon besoin |
+| **Seuil de similarité** | Score minimum pour match normal | 0.78 | 0.75-0.82 selon besoin |
+| **Seuil combinatoire** | Score minimum pour match combinatoire | 0.65 | 0.60-0.70 (plus tolérant) |
 | **Taille de batch** | Éléments traités simultanément | 16 | 8-16 CPU, 32-64 GPU |
 | **Limite de lignes** | Max lignes à traiter (0=tout) | 0 | Tester avec 100 d'abord |
 | **Mode de matching** | Complet ou Approximatif | Complet | Approximatif si >10k lignes |
+| **Exclure matchés** | Exclure lignes déjà matchées du combinatoire | Non | Oui si unicité requise |
 
 ---
 
@@ -220,7 +243,9 @@ Mismatches définitifs (aucune correspondance trouvée).
 | Trop de faux positifs | Augmenter seuil (0.82-0.85), activer LLM |
 | Trop de faux négatifs | Diminuer seuil (0.72-0.75), activer combinatoire |
 | Traitement très lent | Mode approximatif, réduire budget LLM |
-| Matches combinatoires non pertinents | Réduire max_combinations |
+| Matches combinatoires non pertinents | Réduire max_combinations, augmenter seuil combinatoire |
+| Lignes Base 2 réutilisées plusieurs fois | Activer "Exclure les lignes déjà matchées" |
+| Pas assez de matches combinatoires | Baisser seuil combinatoire (0.55-0.60) |
 
 ---
 
