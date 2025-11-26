@@ -193,17 +193,21 @@ def apply_combinatorial_strategy(
                     f"indices={list(top_k_indices)}, score={combo_score:.4f}"
                 )
 
-                # Créer le nouveau match
+                # Créer le nouveau match avec numéros de lignes Excel
+                tgt_lignes_combined = [int(idx) + 2 for idx in top_k_indices]  # +2 car ligne 1 = en-tête
                 new_match = {
                     "src_index": src_idx,
+                    "src_ligne": src_idx + 2,  # Numéro de ligne Excel
                     "tgt_index": None,  # Pas d'index unique
+                    "tgt_ligne": None,  # Pas de ligne unique
                     "tgt_indices_combined": list(top_k_indices),  # Liste des indices combinés
+                    "tgt_lignes_combined": tgt_lignes_combined,  # Lignes Excel combinées
                     "source": src_text,
                     "target": combined_text,
                     "score": round(combo_score, 4),
                     "match_type": "combinatorial",
                     "combination_size": k,
-                    "warning": f"⚠️ MATCH COMBINATOIRE : Lignes base 2 combinées = {list(top_k_indices)}",
+                    "warning": f"⚠️ MATCH COMBINATOIRE : Lignes base 2 combinées = {tgt_lignes_combined}",
                     "individual_scores": [round(float(s), 4) for s in top_k_scores],
                 }
 
@@ -592,9 +596,12 @@ def main():
                         tgt = ""
                         tgt_idx = None
 
+                    # Numéros de lignes Excel (index + 2 car ligne 1 = en-tête)
                     row = {
                         "src_index": i,
+                        "src_ligne": i + 2,  # Numéro de ligne Excel
                         "tgt_index": tgt_idx,
+                        "tgt_ligne": tgt_idx + 2 if tgt_idx is not None else None,  # Numéro de ligne Excel
                         "source": src,
                         "target": tgt,
                         "score": round(float(score), 4),
