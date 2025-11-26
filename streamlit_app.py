@@ -774,155 +774,17 @@ def main():
 
                 progress_bar.progress(100, text="✅ Terminé !")
 
-                # Affichage des résultats
-                st.markdown("---")
-                st.markdown("## 🎯 Résultats")
-
-                # Métriques
-                total = len(matches_above) + len(under)
-                match_rate = (len(matches_above) / total * 100) if total > 0 else 0
-
-                # Compter les matches combinatoires
-                combinatorial_count = sum(1 for m in matches_above if m.get("match_type") == "combinatorial")
-                normal_matches = len(matches_above) - combinatorial_count
-
-                if combinatorial_count > 0:
-                    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-                else:
-                    col_m1, col_m2, col_m3 = st.columns(3)
-
-                with col_m1:
-                    st.metric(
-                        label="✅ Matches normaux",
-                        value=normal_matches,
-                        help="Paires simples au-dessus du seuil"
-                    )
-
-                with col_m2:
-                    if combinatorial_count > 0:
-                        st.metric(
-                            label="🔀 Matches combinatoires",
-                            value=combinatorial_count,
-                            help="Matches trouvés par combinaison de lignes"
-                        )
-                    else:
-                        st.metric(
-                            label="⚠️ Sous le seuil",
-                            value=len(under),
-                            help="Paires sous le seuil"
-                        )
-
-                with col_m3:
-                    if combinatorial_count > 0:
-                        st.metric(
-                            label="⚠️ Mismatches définitifs",
-                            value=len(under),
-                            help="Aucune combinaison trouvée"
-                        )
-                    else:
-                        st.metric(
-                            label="📊 Taux de match",
-                            value=f"{match_rate:.1f}%",
-                            help="Pourcentage de correspondances"
-                        )
-
-                if combinatorial_count > 0:
-                    with col_m4:
-                        st.metric(
-                            label="📊 Taux de match",
-                            value=f"{match_rate:.1f}%",
-                            help="Pourcentage de correspondances"
-                        )
-
-                st.markdown("---")
-
-                # Aperçu des résultats
-                tab1, tab2 = st.tabs(["✅ Matches", "⚠️ Mismatches définitifs"])
-
-                with tab1:
-                    st.subheader(f"Correspondances (≥ {threshold})")
-                    if matches_above:
-                        # Séparer matches normaux et combinatoires
-                        normal_matches_list = [m for m in matches_above if m.get("match_type") != "combinatorial"]
-                        combinatorial_matches_list = [m for m in matches_above if m.get("match_type") == "combinatorial"]
-
-                        if combinatorial_count > 0:
-                            st.info(
-                                f"📊 Total : {len(matches_above)} matches "
-                                f"({normal_matches} normaux + {combinatorial_count} combinatoires)"
-                            )
-
-                        # Afficher les matches combinatoires en premier avec un avertissement
-                        if combinatorial_matches_list:
-                            st.warning(
-                                f"⚠️ {len(combinatorial_matches_list)} match(es) combinatoire(s) détecté(s) - "
-                                "Une ligne de base 1 correspond à plusieurs lignes combinées de base 2"
-                            )
-                            st.markdown("**🔀 Matches combinatoires :**")
-                            df_combo = pd.DataFrame(combinatorial_matches_list)
-                            st.dataframe(
-                                df_combo,
-                                width='stretch',
-                                height=min(200, len(combinatorial_matches_list) * 50 + 50)
-                            )
-
-                        # Afficher les matches normaux
-                        if normal_matches_list:
-                            if combinatorial_matches_list:
-                                st.markdown("**✅ Matches normaux :**")
-                            df_normal = pd.DataFrame(normal_matches_list)
-                            st.dataframe(
-                                df_normal,
-                                width='stretch',
-                                height=min(400, len(normal_matches_list) * 50 + 50)
-                            )
-
-                        # Si aucun match combinatoire, afficher tout ensemble
-                        if not combinatorial_matches_list:
-                            df_matches = pd.DataFrame(matches_above)
-                            st.dataframe(df_matches, width='stretch', height=400)
-                    else:
-                        st.info("Aucune correspondance au-dessus du seuil.")
-
-                with tab2:
-                    if combinatorial_strategy:
-                        st.subheader(f"Mismatches définitifs")
-                        st.info("Ces lignes n'ont pas trouvé de correspondance, même avec la stratégie combinatoire")
-                    else:
-                        st.subheader(f"Sous le seuil (< {threshold})")
-
-                    if under:
-                        df_under = pd.DataFrame(under)
-                        st.dataframe(df_under, width='stretch', height=400)
-                    else:
-                        st.success("✅ Toutes les lignes ont trouvé une correspondance !")
-
-                # Téléchargements
-                st.markdown("---")
-                st.subheader("📥 Télécharger les résultats")
-
-                col_d1, col_d2 = st.columns(2)
-
-                with col_d1:
-                    with open(matches_path, "rb") as f:
-                        st.download_button(
-                            label="📥 Télécharger matches.xlsx",
-                            data=f,
-                            file_name=matches_filename,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            type="primary"
-                        )
-
-                with col_d2:
-                    with open(under_path, "rb") as f:
-                        st.download_button(
-                            label="📥 Télécharger under_threshold.xlsx",
-                            data=f,
-                            file_name=under_filename,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-
-                st.success(f"✅ Résultats sauvegardés dans : {OUTPUT_DIR}")
+                # Stocker les résultats dans session_state pour persistance
+                st.session_state['results'] = {
+                    'matches_above': matches_above,
+                    'under': under,
+                    'matches_path': str(matches_path),
+                    'under_path': str(under_path),
+                    'matches_filename': matches_filename,
+                    'under_filename': under_filename,
+                    'threshold': threshold,
+                    'combinatorial_strategy': combinatorial_strategy,
+                }
 
         except Exception as e:
             st.error(f"❌ Erreur : {str(e)}")
@@ -930,6 +792,168 @@ def main():
                 st.code(traceback.format_exc())
             logger.error(f"Erreur : {e}")
             logger.debug(traceback.format_exc())
+
+    # Affichage des résultats depuis session_state (persiste après téléchargement)
+    if 'results' in st.session_state:
+        results = st.session_state['results']
+        matches_above = results['matches_above']
+        under = results['under']
+        matches_path = Path(results['matches_path'])
+        under_path = Path(results['under_path'])
+        matches_filename = results['matches_filename']
+        under_filename = results['under_filename']
+        threshold = results['threshold']
+        combinatorial_strategy = results['combinatorial_strategy']
+
+        # Affichage des résultats
+        st.markdown("---")
+        st.markdown("## 🎯 Résultats")
+
+        # Métriques
+        total = len(matches_above) + len(under)
+        match_rate = (len(matches_above) / total * 100) if total > 0 else 0
+
+        # Compter les matches combinatoires
+        combinatorial_count = sum(1 for m in matches_above if m.get("match_type") == "combinatorial")
+        normal_matches = len(matches_above) - combinatorial_count
+
+        if combinatorial_count > 0:
+            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+        else:
+            col_m1, col_m2, col_m3 = st.columns(3)
+
+        with col_m1:
+            st.metric(
+                label="✅ Matches normaux",
+                value=normal_matches,
+                help="Paires simples au-dessus du seuil"
+            )
+
+        with col_m2:
+            if combinatorial_count > 0:
+                st.metric(
+                    label="🔀 Matches combinatoires",
+                    value=combinatorial_count,
+                    help="Matches trouvés par combinaison de lignes"
+                )
+            else:
+                st.metric(
+                    label="⚠️ Sous le seuil",
+                    value=len(under),
+                    help="Paires sous le seuil"
+                )
+
+        with col_m3:
+            if combinatorial_count > 0:
+                st.metric(
+                    label="⚠️ Mismatches définitifs",
+                    value=len(under),
+                    help="Aucune combinaison trouvée"
+                )
+            else:
+                st.metric(
+                    label="📊 Taux de match",
+                    value=f"{match_rate:.1f}%",
+                    help="Pourcentage de correspondances"
+                )
+
+        if combinatorial_count > 0:
+            with col_m4:
+                st.metric(
+                    label="📊 Taux de match",
+                    value=f"{match_rate:.1f}%",
+                    help="Pourcentage de correspondances"
+                )
+
+        st.markdown("---")
+
+        # Aperçu des résultats
+        tab1, tab2 = st.tabs(["✅ Matches", "⚠️ Mismatches définitifs"])
+
+        with tab1:
+            st.subheader(f"Correspondances (≥ {threshold})")
+            if matches_above:
+                # Séparer matches normaux et combinatoires
+                normal_matches_list = [m for m in matches_above if m.get("match_type") != "combinatorial"]
+                combinatorial_matches_list = [m for m in matches_above if m.get("match_type") == "combinatorial"]
+
+                if combinatorial_count > 0:
+                    st.info(
+                        f"📊 Total : {len(matches_above)} matches "
+                        f"({normal_matches} normaux + {combinatorial_count} combinatoires)"
+                    )
+
+                # Afficher les matches combinatoires en premier avec un avertissement
+                if combinatorial_matches_list:
+                    st.warning(
+                        f"⚠️ {len(combinatorial_matches_list)} match(es) combinatoire(s) détecté(s) - "
+                        "Une ligne de base 1 correspond à plusieurs lignes combinées de base 2"
+                    )
+                    st.markdown("**🔀 Matches combinatoires :**")
+                    df_combo = pd.DataFrame(combinatorial_matches_list)
+                    st.dataframe(
+                        df_combo,
+                        width='stretch',
+                        height=min(200, len(combinatorial_matches_list) * 50 + 50)
+                    )
+
+                # Afficher les matches normaux
+                if normal_matches_list:
+                    if combinatorial_matches_list:
+                        st.markdown("**✅ Matches normaux :**")
+                    df_normal = pd.DataFrame(normal_matches_list)
+                    st.dataframe(
+                        df_normal,
+                        width='stretch',
+                        height=min(400, len(normal_matches_list) * 50 + 50)
+                    )
+
+                # Si aucun match combinatoire, afficher tout ensemble
+                if not combinatorial_matches_list:
+                    df_matches = pd.DataFrame(matches_above)
+                    st.dataframe(df_matches, width='stretch', height=400)
+            else:
+                st.info("Aucune correspondance au-dessus du seuil.")
+
+        with tab2:
+            if combinatorial_strategy:
+                st.subheader(f"Mismatches définitifs")
+                st.info("Ces lignes n'ont pas trouvé de correspondance, même avec la stratégie combinatoire")
+            else:
+                st.subheader(f"Sous le seuil (< {threshold})")
+
+            if under:
+                df_under = pd.DataFrame(under)
+                st.dataframe(df_under, width='stretch', height=400)
+            else:
+                st.success("✅ Toutes les lignes ont trouvé une correspondance !")
+
+        # Téléchargements
+        st.markdown("---")
+        st.subheader("📥 Télécharger les résultats")
+
+        col_d1, col_d2 = st.columns(2)
+
+        with col_d1:
+            with open(matches_path, "rb") as f:
+                st.download_button(
+                    label="📥 Télécharger matches.xlsx",
+                    data=f,
+                    file_name=matches_filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    type="primary"
+                )
+
+        with col_d2:
+            with open(under_path, "rb") as f:
+                st.download_button(
+                    label="📥 Télécharger under_threshold.xlsx",
+                    data=f,
+                    file_name=under_filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+        st.success(f"✅ Résultats sauvegardés dans : {OUTPUT_DIR}")
 
     # README en bas de page
     st.markdown("---")
